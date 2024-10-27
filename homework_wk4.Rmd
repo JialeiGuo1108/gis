@@ -1,0 +1,38 @@
+
+```{r}
+library(here)
+library(sf)
+library(tidyr)
+library(readxl)
+library(dplyr)
+library(janitor)
+
+#read the raw data
+world <- st_read(here("homework_data","World_Countries_(Generalized)_9029012925078512962.geojson"))
+class(world)
+
+genderinequ <- read_excel(here("homework_data","HDR23-24_Statistical_Annex_GII_Table.xlsx"),
+                         skip = 7)
+
+summary(genderinequ)
+genderinequ
+#排除第四列空值
+genderinequ2 <- genderinequ%>%
+  dplyr::select(-4)
+
+#改column name
+colnames(genderinequ2)[1:4]<- c("HDIrank","country","value","rank")
+
+#排除空值
+genderinequ2 <- genderinequ2%>%
+  filter(!is.na(HDIrank))
+
+
+#合并
+shape <- world%>%
+  merge(.,
+        genderinequ2,
+        by.x="COUNTRY", 
+        by.y="country")
+```
+
