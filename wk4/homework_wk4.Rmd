@@ -1,0 +1,65 @@
+# Homework_wk4
+
+### Data
+
+-   spatial data of the World (genjson)
+-   IHDI(csv)
+
+### Process
+
+-   read the raw data
+-   extract data of gender inequality index of 2010 and 2019
+-   calculate the difference
+-   merge the tibble and sf
+
+### Outputs
+
+```{r}
+#Load Packages
+library(here)
+library(sf)
+library(tidyr)
+library(readr)
+library(dplyr)
+library(tidyverse)
+library(janitor)
+library(countrycode)
+library(tmap)
+library(tmaptools)
+
+#read the raw data
+world <- st_read(here("homework_data","World_Countries_(Generalized)_9029012925078512962.geojson"))
+class(world)
+
+hdrtable <- read_csv(here("homework_data","HDR23-24_Composite_indices_complete_time_series.csv"))
+
+hdrtable %>%
+  head()
+
+#select the index of 2010 and 2019
+hdrtable_2 <- hdrtable %>%
+  dplyr::select("iso3","country","gii_2010","gii_2019")
+
+#mew column with the average of 2010 and 2019
+gender_inequality <- hdrtable_2 %>%
+  mutate(differen_gender_inequality=gii_2010-gii_2019) 
+
+#top of data
+slice_head(gender_inequality, n=5)
+
+#convert iso3 to iso2
+gender_inequality_2 <- gender_inequality %>%
+  filter(!is.na(gii_2010))%>%
+  mutate(ISO=countrycode(iso3,"iso3c","iso2c"))
+
+#merge the data
+gender_inequalty_world <- world%>%
+  left_join(.,
+            gender_inequality_2,
+            by="ISO")
+
+
+tmap_mode("plot")
+qtm( gender_inequalty_world, 
+    fill = "differen_gender_inequality")
+```
