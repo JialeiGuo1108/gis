@@ -4,17 +4,10 @@
 ```{r}
 library(sf)
 library(jsonlite)
-=======
-
-Load Packages
-```{r}
-library(sf)
->>>>>>> eb0bdd1c3f3fd32255c67f23dee0ea30be34413e
 library(tmap)
 library(tmaptools)
 library(tidyverse)
 library(here)
-<<<<<<< HEAD
 
 ```
 
