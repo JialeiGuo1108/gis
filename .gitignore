@@ -6,4 +6,9 @@
 .httr-oauth
 .DS_Store
 .quarto
+<<<<<<< HEAD
 wk4/
+=======
+homework_5/*
+wk4/*
+>>>>>>> eb0bdd1c3f3fd32255c67f23dee0ea30be34413e

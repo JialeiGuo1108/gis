@@ -1,12 +1,20 @@
+<<<<<<< HEAD
 ### Load Package
 
 ```{r}
 library(sf)
 library(jsonlite)
+=======
+
+Load Packages
+```{r}
+library(sf)
+>>>>>>> eb0bdd1c3f3fd32255c67f23dee0ea30be34413e
 library(tmap)
 library(tmaptools)
 library(tidyverse)
 library(here)
+<<<<<<< HEAD
 
 ```
 
@@ -66,13 +74,14 @@ Worldcities <- st_read(here::here("wk5/practical5_data",
                                   "World_Cities.geojson") )%>%
   st_transform(., 27700) 
 
-
 Worldcities2 <- Worldcities %>%
   filter(CNTRY_NAME=='United Kingdom'&
            Worldcities$CITY_NAME=='Birmingham'|
            Worldcities$CITY_NAME=='London'|
            Worldcities$CITY_NAME=='Edinburgh')
+=======
 ```
+
 
 ```{r}
 #读取uk_outline(.shp)
@@ -87,21 +96,31 @@ UK_outline <- st_read(shp_file_UK[1]) %>%
 ```
 
 ```{r}
+=======
+
+>>>>>>> eb0bdd1c3f3fd32255c67f23dee0ea30be34413e
 #定义边界框坐标
 newbb <- c(xmin=-296000, ymin=5408, xmax=655696, ymax=1000000)
   
 UK_outlinecrop <- UK_outline$geometry %>%
   st_crop(., newbb)
 ```
+<<<<<<< HEAD
 
+=======
+>>>>>>> eb0bdd1c3f3fd32255c67f23dee0ea30be34413e
 ```{r}
 join_example <-  st_join(Londonborough, OSM)
 
 head(join_example)
 ```
+<<<<<<< HEAD
 
 -  读取airbnb数据
 
+=======
+- 读取airbnb数据
+>>>>>>> eb0bdd1c3f3fd32255c67f23dee0ea30be34413e
 ```{r}
 # read in the .csv
 # and make it into spatial data
@@ -118,7 +137,10 @@ Airbnb <- read_csv("wk7_data/listings.csv") %>%
 ```
 
 设置一个函数用于连接
+<<<<<<< HEAD
 
+=======
+>>>>>>> eb0bdd1c3f3fd32255c67f23dee0ea30be34413e
 ```{r}
 # make a function for the join
 # functions are covered in practical 7
@@ -152,16 +174,23 @@ Airbnb <- Airbnb %>%
   group_by(., GSS_CODE, NAME)%>%
   summarise(`Accomodation count` = unique(hotels_in_borough))
 ```
+<<<<<<< HEAD
 
 问题：如何排除空集？
 
+=======
+问题：如何排除空集？
+>>>>>>> eb0bdd1c3f3fd32255c67f23dee0ea30be34413e
 ```{r}
 Airbnb %>%
   filter(NAME=="Sutton")
 ```
 
 制作地图
+<<<<<<< HEAD
 
+=======
+>>>>>>> eb0bdd1c3f3fd32255c67f23dee0ea30be34413e
 ```{r}
 tmap_mode("plot")
 
@@ -219,9 +248,13 @@ print(tm2, vp=viewport(layout.pos.col=2, layout.pos.row=1, height=5))
 print(tm3, vp=viewport(layout.pos.col=1, layout.pos.row=2, height=5))
 print(legend, vp=viewport(layout.pos.col=2, layout.pos.row=2, height=5))
 ```
+<<<<<<< HEAD
 
 嵌套地图
 
+=======
+嵌套地图
+>>>>>>> eb0bdd1c3f3fd32255c67f23dee0ea30be34413e
 ```{r}
 Londonbb <- st_bbox(Airbnb,
                     crs = st_crs(Airbnb))%>%
@@ -267,7 +300,10 @@ print(inset, vp = viewport(0.86, 0.29, width = 0.5, height = 0.55))
 ```
 
 输出地图
+<<<<<<< HEAD
 
+=======
+>>>>>>> eb0bdd1c3f3fd32255c67f23dee0ea30be34413e
 ```{r}
 tmap_save(t, 'hotelsandairbnbR.png')
 
@@ -276,10 +312,18 @@ tmap_save(main,insets_tm = inset,insets_vp=viewport(x=0.86, y=0.29, width=.5, he
 ```
 
 交互地图
+<<<<<<< HEAD
 
+=======
+>>>>>>> eb0bdd1c3f3fd32255c67f23dee0ea30be34413e
 ```{r}
 tmap_mode("view")
 
 tm_shape(Airbnb) + 
   tm_polygons("Accomodation count", breaks=breaks) 
 ```
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> eb0bdd1c3f3fd32255c67f23dee0ea30be34413e
