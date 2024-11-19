@@ -1,0 +1,148 @@
+# Detecting spatial patterns
+
+> how to begin to analyse patterns in spatial data Point Pattern Analysis
+
+## Research Question
+
+-   the patterns of Blue Plaques
+-   For any given London Borough, are the Blue Plaques within that borough distributed randomly or do they exhibit some kind of dispersed or clustered pattern?”
+
+## data exploration
+
+### initial project scope
+
+### packages
+
+```{r}
+#first library a few packages that we will use during the practical
+#note you may need to install them first...
+#install.packages("spatstat")
+library(spatstat)
+library(here)
+library(sp)
+library(tmap)
+library(sf)
+library(tmaptools)
+library(stringr)
+```
+
+### Download the suggested datasets
+
+read the data of London borough
+
+```{r}
+# 从 URL 下载和读取
+url <- "https://data.london.gov.uk/download/statistical-gis-boundary-files-london/9ba8c833-6370-4b11-abdc-314aa020d5e0/statistical-gis-boundaries-london.zip"
+temp <- tempfile(fileext = ".zip")
+download.file(url, temp)
+
+# 解压文件
+unzip(temp, exdir = tempdir())
+
+#并找到 .shp 文件路径
+shp_file <- list.files(tempdir(), pattern = "\\.shp$", full.names = TRUE, recursive = TRUE)
+# 检查是否找到 .shp 文件
+if (length(shp_file) == 0) {
+  stop("没有找到 .shp 文件，请检查 URL 或解压目录。")
+}
+
+# 读取 .shp 文件
+LondonBoroughs <- st_read(shp_file[19])%>%
+  st_transform(., 27700)
+
+```
+
+**加载动态底图？**
+
+```{r}
+qtm(LondonBoroughs)
+```
+
+```{r}
+summary(LondonBoroughs)
+```
+
+-   load the data of Blue Plaques
+
+```{r}
+##Now get the location of all Blue Plaques in the City
+BluePlaques <- st_read("https://s3.eu-west-2.amazonaws.com/openplaques/open-plaques-london-2018-04-08.geojson")
+
+summary(BluePlaques)
+
+```
+
+-   Finding: the CRS of BluePlaques is 4326, different from that of LondonBoroughs.
+
+```{r}
+#change the CRS
+BluePlaques <- BluePlaques %>%
+  st_transform(., 27700)
+summary(BluePlaques)
+```
+
+```{r}
+#plot the blue plaques in the city
+tmap_mode("plot")
+tm_shape(LondonBoroughs) +
+  tm_polygons(col = NA, alpha = 0.5) +
+tm_shape(BluePlaques) +
+  tm_dots(col = "blue")
+```
+
+## Analysis
+
+### Data cleaning
+
+Due to the error locations of some blue plaques, my first step is to remove the special points outside of the Borough boundaries.
+
+```{r}
+#remove duplicates
+library(tidyverse)
+
+library(sf)
+BluePlaques <- distinct(BluePlaques)
+```
+
+### Spatial subsetting
+
+拓扑关系 -\> Spatial clipping - Spatial clipping \> st union(x, y) \> st difference(x, y) \> st intersection(x, y) \> st difference(y, x) \> st sym difference(x, y) **不同拓扑关系的函数** <https://postgis.net/workshops/postgis-intro/spatial_relationships.html>
+
+```{r}
+BluePlaquesSub <- BluePlaques[LondonBoroughs,]
+
+#or将运算符或 op 设置为st_within ，以识别完全在行政区轮廓内的点
+#BluePlaquesSub <- BluePlaques[BoroughMap, , op = st_within]
+
+#check to see that they've been removed
+tmap_mode("plot")
+tm_shape(LondonBoroughs) +
+  tm_polygons(col = NA, alpha = 0.5) +
+tm_shape(BluePlaquesSub) +
+  tm_dots(col = "blue")
+```
+
+use the function which will have the indices of where they intersect
+
+```{r}
+# add sparse=false to get the complete matrix.
+intersect_indices <-st_intersects(LondonBoroughs,
+                                  BluePlaques,
+                                  sparse = FALSE) # sparse=false 获取完整的相交矩阵
+```
+
+\-`ST_Intersects` & `ST_Within` st_within 不会选择不完全位于多边形内的线。
+
+### Spatial joining
+
+```{r}
+#读取osm(.shp)
+url_OSM <- "https://download.geofabrik.de/europe/united-kingdom/england/greater-london-latest-free.shp.zip"
+temp_OSM <- tempfile(fileext = ".zip")
+download.file(url_OSM, temp_OSM)
+unzip(temp_OSM, exdir = tempdir())
+shp_file_OSM <- list.files(tempdir(), pattern = "\\.shp$", full.names = TRUE, recursive = TRUE)
+
+OSM <- st_read(shp_file_OSM[9]) %>%
+  st_transform(., 27700)
+```

@@ -40,7 +40,7 @@ if (length(shp_file) == 0) {
 }
 
 # 读取 .shp 文件
-Londonborough <- st_read(shp_file[34])%>%
+Londonborough <- st_read(shp_file[1])%>%
   st_transform(., 27700)
 
 ```
@@ -72,7 +72,7 @@ Worldcities2 <- Worldcities %>%
            Worldcities$CITY_NAME=='Birmingham'|
            Worldcities$CITY_NAME=='London'|
            Worldcities$CITY_NAME=='Edinburgh')
-=======
+
 ```
 
 
@@ -89,9 +89,6 @@ UK_outline <- st_read(shp_file_UK[1]) %>%
 ```
 
 ```{r}
-=======
-
->>>>>>> eb0bdd1c3f3fd32255c67f23dee0ea30be34413e
 #定义边界框坐标
 newbb <- c(xmin=-296000, ymin=5408, xmax=655696, ymax=1000000)
   
