@@ -1,0 +1,142 @@
+# Analysing Spatial Autocorrelation with Moran’s I, LISA and friends
+空间自相关是邻近数据之间相似性的度量
+- packages\
+`spdep`
+-Question\
+伦敦各区的值（在本例中为蓝色斑块的密度）是否相似（或不同）
+
+## Import the packages
+```{r}
+#install.packages(sped)
+library(sf)
+library(here)
+library(janitor)
+library(readr)
+library(dplyr)
+library(tmap)
+library(spdep)
+```
+
+## Download the data
+```{r}
+LondonWardData <- st_read(here::here('wk8/statistical-gis-boundaries-london 2/ESRI','London_Ward.shp'))%>%
+  st_transform(., 27700)
+LondonWardCity <- st_read(here::here('wk8/statistical-gis-boundaries-london 2/ESRI',
+                                      'London_Ward_CityMerged.shp'))%>%
+  st_transform(., 27700)
+```
+
+
+```{r}
+head(LondonWardData,10)
+```
+
+
+```{r}
+head(LondonWardCity,10)
+```
+
+```{r}
+'''
+https://data.london.gov.uk/dataset/ward-profiles-and-atlas
+提供了大伦敦地区每个病区的一系列人口统计和相关数据
+包括趋势数据，通常包括原始数字，而不是百分比或比率
+'''
+WardData <- read_csv("https://data.london.gov.uk/download/ward-profiles-and-atlas/772d2d64-e8c6-46cb-86f9-e52b4c7851bc/ward-profiles-excel-version.csv",
+                    locale = locale(encoding = "latin1"),## 设置文件编码
+                     na = c("NA", "n/a")) %>% #将文件中标记为 "NA" 和 "n/a" 的值识别为缺失值（NA）
+  clean_names()#统一列名格式，小写、去掉空格、下划线
+head(WardData,10)
+```
+```{r}
+#将ward的人口数据和地理文件合并，丰富内容
+LondonWardsMerged <- LondonWardCity %>% 
+  left_join(WardData, 
+            by = c("GSS_CODE" = "new_code"))%>%
+  dplyr::distinct(GSS_CODE, .keep_all = T)%>%
+  dplyr::select(GSS_CODE, ward_name, average_gcse_capped_point_scores_2014)
+#查看投影
+st_crs(LondonWardsMerged)
+```
+```{r}
+#读取蓝色碑
+BluePlaques <- st_read('https://s3.eu-west-2.amazonaws.com/openplaques/open-plaques-london-2018-04-08.geojson')%>%
+    st_transform(.,27700)
+```
+```{r}
+#绘图ward&蓝色碑
+tmap_mode("view")#设置地图的模式
+tm_shape(LondonWardsMerged) +
+  tm_polygons(col = NA, alpha = 0.5) +
+  tm_shape(BluePlaques) +
+  tm_dots(col = "blue")
+```
+
+有部分的蓝色碑点位于ward的区块外，我们需要去除这些点
+## cleaning data
+```{r}
+summary(BluePlaques)#查看是否为sf文件，crs是否一致 -》sf几何运算
+BluePlaquesSub <- BluePlaques[LondonWardsMerged,]#子集操作：提取 BluePlaques 中位于 LondonWardsMerged 内的点
+```
+
+```{r}
+#检查提取的点是否都在ward内
+tmap_mode("plot")
+tm_shape(LondonWardsMerged) +
+  tm_polygons(col = NA, alpha = 0.5) +
+tm_shape(BluePlaquesSub) +
+  tm_dots(col = "blue")
+```
+## analysis-spatical autocorrelation
+观察（蓝色斑块的计数、平均 GCSE 分数、平均收入等）进行空间参考（即附加到像病房或行政区这样的空间单位）
+```{r}
+#计算城市中每个区内的所有蓝色斑块
+#将两个图层相交
+BlusePlacesWard <- st_intersects(BluePlaques,LondonWardsMerged,sparse = TRUE)
+BlusePlacesWard
+```
+```{r}
+#检查st_join()下的kut的情况
+#st_join和st_intersect()的id不同
+check_example <- LondonWardsMerged%>%
+  st_join(BluePlaquesSub)%>%
+  filter(ward_name=="Kingston upon Thames - Coombe Hill")
+```
+
+```{r}
+#计算每个ward内的蓝色碑的密度=数量（相交的列表长度）/面积
+points_sf_joined <- LondonWardsMerged%>%
+  mutate(n = lengths(st_intersects(., BluePlaquesSub)))%>%
+  janitor::clean_names()%>%
+  #calculate area
+  mutate(area=st_area(.))%>%
+  #then density of the points per ward
+  mutate(density=n/area)%>%
+  #select density and some other variables 
+  dplyr::select(density, ward_name, gss_code, n, average_gcse_capped_point_scores_2014)
+```
+
+```{r}
+#按照 gss_code 分组，并通过 summarise() 函数对分组后的数据进行汇总计算
+points_sf_joined<- points_sf_joined %>%                    
+  group_by(gss_code) %>%         
+  summarise(density = first(density),#提取 density 列的第一个值
+          wardname= first(ward_name),
+          plaquecount= first(n))
+#个 gss_code 分组对应一条记录，并包含以下列：gss_code（分组键）。density（分组内第一个 density 值）。wardname（分组内第一个 ward_name 值）。plaquecount（分组内第一个 n 值）
+
+
+#绘图
+tmap_mode("view")
+tm_shape(points_sf_joined) +
+    tm_polygons("density",
+        style="jenks",
+        palette="PuOr",
+        midpoint=0,#使用调色板的中间值
+        # popup.vars=c("wardname", "density")
+        title="Blue Plaque Density")
+```
+
+
+
+

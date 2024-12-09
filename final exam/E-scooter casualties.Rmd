@@ -1,0 +1,95 @@
+## Initial project scope
+- Question
+Where did e-scooter accidents happen more often in 2023?
+
+- Hypothesis
+E-scooter accidents more happened in the inner London than the outer London in 2023.
+Null Hypothesis = no difference
+
+- Analysis
+Examine whether the results of the test confirm your hypothesis
+
+
+```{r}
+#load the libraries
+library(sf)
+library(here)
+library(readr)
+library(dplyr)
+library(janitor)
+library(tmap)
+```
+
+## Data loading
+1)Road Safety Data - Vehicles 2023:<https://data.dft.gov.uk/road-accidents-safety-data/dft-road-casualty-statistics-vehicle-2023.csv>
+vehicle_type:22 represents Mobility scooter
+2)Road Safety Data - Collisions 2023:<https://data.dft.gov.uk/road-accidents-safety-data/dft-road-casualty-statistics-collision-2023.csv>
+accident_index:join the Vehicles and Casualties data
+longitude
+latitude
+3) Road Safety Data - Casualties 2023: <https://data.dft.gov.uk/road-accidents-safety-data/dft-road-casualty-statistics-casualty-2023.csv>
+4)statistical-gis-boundaries-london.zip <https://data.london.gov.uk/download/statistical-gis-boundary-files-london/9ba8c833-6370-4b11-abdc-314aa020d5e0/statistical-gis-boundaries-london.zip>
+
+```{r}
+#read the data
+vehicles <- read_csv('https://data.dft.gov.uk/road-accidents-safety-data/dft-road-casualty-statistics-vehicle-2023.csv')
+collisions <- read_csv('https://data.dft.gov.uk/road-accidents-safety-data/dft-road-casualty-statistics-collision-2023.csv')
+casualties <- read_csv('https://data.dft.gov.uk/road-accidents-safety-data/dft-road-casualty-statistics-casualty-2023.csv')
+
+Londonborough <- st_read(here::here('final exam','statistical-gis-boundaries-london','ESRI','London_Borough_Excluding_MHW.shp'))#WGS84
+
+head(vehicles)
+```
+```{r}
+# check the columns type
+library(purrr)
+Datatypelist <- tibble(variable = names(vehicles), # 提取列名
+                         type = map_chr(vehicles,class) # 获取每列数据的底层类型
+)
+print(Datatypelist)
+```
+
+
+
+## Data wrangling
+1) 选择事故车辆是e-scooter，并结合collision数据增加latitude and longitude
+```{r}
+#select the e-scooter accidents
+e_scooter_accidents <- vehicles%>%
+  clean_names()%>%
+  filter(vehicle_type == 22)%>%#列名不需要quotes
+  select(accident_index,vehicle_type)
+
+#add the latitude and longitude
+collisions_e_scooter <- left_join(e_scooter_accidents,collisions, by = NULL)
+collisions_e_scooter_casualties <- left_join(collisions_e_scooter,casualties, by = NULL)
+```
+2)change the CRS
+```{r}
+#转换成sf
+points_escooter <- collisions_e_scooter_casualties%>%
+  st_as_sf(coords = c("longitude", "latitude"), 
+                   crs = 4326)%>%
+  st_transform(.,27700)
+
+Londonborough <- Londonborough%>%
+  clean_names()%>%
+  st_transform(.,27700)
+```
+
+3)count the accidents by the districts
+```{r}
+points_escooter_Lon <- points_escooter[Londonborough,]
+
+tmap_mode('plot')
+tm_shape(Londonborough)+
+  tm_polygons(col= "ons_inner",  # 按 one_inner 列上色
+              palette =c("FALSE" = "#fde0dd", "TRUE" = "#c51b8a"),
+              alpha=0.3)+
+tm_shape(points_escooter_Lon)+
+  tm_dots(col='blue')
+```
+
+## Data Analysis
+### Ripley’s K-见practical6.6
+
